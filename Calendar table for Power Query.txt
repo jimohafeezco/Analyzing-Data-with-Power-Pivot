@@ -1,0 +1,23 @@
+let
+// To be turned into parameter
+startDate = Date.StartOfYear(List.Min(sales[Date])), 
+// To be turned into parameter
+endDate = Date.EndOfYear(List.Max(sales[Date])), 
+// To be turned into parameter
+culture = "en-US" as text,
+
+// Beginning of actual query 👇 
+Source = List.Dates(startDate, Duration.Days(Duration.From(endDate - startDate)) + 1, #duration(1, 0, 0, 0)),
+
+TableFromList = Table.FromList(Source, Splitter.SplitByNothing()),
+ChangedType = Table.TransformColumnTypes(TableFromList,{{"Column1", type date}}),
+RenamedColumns = Table.RenameColumns(ChangedType,{{"Column1", "Date"}}),
+InsertYear = Table.AddColumn(RenamedColumns , "Year", each Date.Year([Date]),type text),
+InsertQuarterNumber = Table.AddColumn(InsertYear, "Quarter Number", each Date.QuarterOfYear([Date])),
+InsertQuarterName = Table.AddColumn(InsertQuarterNumber, "Quarter Name", each "Q" & Number.ToText([Quarter Number])),
+InsertMonth = Table.AddColumn(InsertQuarterName, "Month Number", each Date.Month([Date]), type text),
+#"Changed Type" = Table.TransformColumnTypes(InsertMonth,{{"Quarter Name", type text}, {"Month Number", Int64.Type}, {"Year", Int64.Type}}),
+    #"Removed Columns" = Table.RemoveColumns(#"Changed Type",{"Quarter Number"}),
+    #"Inserted Month Name" = Table.AddColumn(#"Removed Columns", "Month Name", each Date.ToText([Date],"MMM"), type text)
+in
+    #"Inserted Month Name"
